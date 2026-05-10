@@ -3,6 +3,7 @@ import json
 import csv
 import webbrowser
 import tempfile
+import subprocess
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.lang import Builder
@@ -104,7 +105,7 @@ ScreenManagement:
                 text: "Print Full Analysis"
                 bold: True
                 background_color: (0, 0.4, 0.8, 1)
-                on_release: app.print_action(stats.text)
+                on_release: app.print_action(root.ids.stats.text)
             Button:
                 text: "Back to Register"
                 bold: True
@@ -157,10 +158,10 @@ class AnalysisScreen(Screen):
         # Status counts
         status_counts = {}
         for p in app.people:
-            s = p['status']
+            s = p.get('status', 'Unknown')
             status_counts[s] = status_counts.get(s, 0) + 1
         
-        notes_list = "\n".join([f" • {p['name']} ({p['status']}): {p.get('note', 'No notes')}" for p in app.people if p.get('note')])
+        notes_list = "\n".join([f" • {p['name']} ({p.get('status', 'Unknown')}): {p.get('note', 'No notes')}" for p in app.people if p.get('note')])
         st_breakdown = "\n".join([f" • {s}: {c}" for s, c in status_counts.items()])
 
         self.ids.stats.text = (
@@ -188,7 +189,8 @@ class HRApp(App):
     def load_data(self):
         self.data_file = os.path.join(self.user_data_dir, "hr_v7_db.json")
         if os.path.exists(self.data_file):
-            with open(self.data_file, "r") as f: self.people = json.load(f)
+            with open(self.data_file, "r") as f:
+                self.people = json.load(f)
         else:
             self.people = [{"prefix": "Rfn", "fn": "000", "rnk": "Pte", "name": "Admin", "suffix": "PE", "status": "Present", "note": ""}]
 
@@ -205,7 +207,8 @@ class HRApp(App):
         btn_row = BoxLayout(size_hint_y=None, height=50)
         sel_btn = Button(text="Select File")
         can_btn = Button(text="Cancel")
-        btn_row.add_widget(sel_btn); btn_row.add_widget(can_btn)
+        btn_row.add_widget(sel_btn)
+        btn_row.add_widget(can_btn)
         content.add_widget(btn_row)
         
         popup = Popup(title="Browse External USB/OTG Storage", content=content, size_hint=(0.95, 0.95))
@@ -240,10 +243,15 @@ class HRApp(App):
         name_in = TextInput(text=p.get('name', ''), hint_text="Name", multiline=False)
         
         suffix_btn = Button(text=p.get('suffix', 'PE'), size_hint_x=0.2, bold=True, background_color=(0.2, 0.6, 0.4, 1))
-        def toggle_suf(inst): inst.text = "MC" if inst.text == "PE" else "PE"
+        def toggle_suf(inst):
+            inst.text = "MC" if inst.text == "PE" else "PE"
         suffix_btn.bind(on_release=toggle_suf)
 
-        row1.add_widget(prefix_btn); row1.add_widget(fn_in); row1.add_widget(rnk_in); row1.add_widget(name_in); row1.add_widget(suffix_btn)
+        row1.add_widget(prefix_btn)
+        row1.add_widget(fn_in)
+        row1.add_widget(rnk_in)
+        row1.add_widget(name_in)
+        row1.add_widget(suffix_btn)
 
         # Row 2: Sick Leave / Notes / USB Attach
         row2 = BoxLayout(size_hint_y=None, height=55, spacing=10)
@@ -251,9 +259,11 @@ class HRApp(App):
         usb_btn = Button(text="Attach File", size_hint_x=0.3, background_color=(1, 0.8, 0, 1), color=(0,0,0,1), bold=True)
         usb_btn.bind(on_release=lambda x: self.open_usb_chooser(note_in))
         
-        row2.add_widget(note_in); row2.add_widget(usb_btn)
+        row2.add_widget(note_in)
+        row2.add_widget(usb_btn)
 
-        content.add_widget(row1); content.add_widget(row2)
+        content.add_widget(row1)
+        content.add_widget(row2)
 
         # Main Controls
         btn_layout = BoxLayout(size_hint_y=None, height=65, spacing=15)
@@ -262,8 +272,10 @@ class HRApp(App):
         clear_btn = Button(text="CLEAR", background_color=(0.8, 0, 0, 1), bold=True)
         cancel_btn = Button(text="CANCEL")
 
-        btn_layout.add_widget(save_btn); btn_layout.add_widget(print_btn)
-        btn_layout.add_widget(clear_btn); btn_layout.add_widget(cancel_btn)
+        btn_layout.add_widget(save_btn)
+        btn_layout.add_widget(print_btn)
+        btn_layout.add_widget(clear_btn)
+        btn_layout.add_widget(cancel_btn)
         content.add_widget(btn_layout)
 
         popup = Popup(title="Personnel File Editor", content=content, size_hint=(0.98, 0.8))
@@ -275,12 +287,22 @@ class HRApp(App):
                 "prefix": prefix_btn.text, "fn": fn_in.text, "rnk": rnk_in.text,
                 "name": name_in.text, "suffix": suffix_btn.text, "status": p['status'], "note": note_in.text
             }
-            if index is not None: self.people[index] = new_data
-            else: self.people.append(new_data)
-            self.save_data(); self.root.get_screen('main').refresh(); popup.dismiss()
+            if index is not None:
+                self.people[index] = new_data
+            else:
+                self.people.append(new_data)
+            self.save_data()
+            self.root.get_screen('main').refresh()
+            popup.dismiss()
+
+        def clear_fields():
+            fn_in.text = ''
+            rnk_in.text = ''
+            name_in.text = ''
+            note_in.text = ''
 
         save_btn.bind(on_release=save_person)
-        clear_btn.bind(on_release=lambda x: [setattr(fn_in, 'text', ''), setattr(rnk_in, 'text', ''), setattr(name_in, 'text', ''), setattr(note_in, 'text', '')])
+        clear_btn.bind(on_release=lambda x: clear_fields())
         cancel_btn.bind(on_release=popup.dismiss)
         popup.open()
 
@@ -288,28 +310,48 @@ class HRApp(App):
         """Generates a text report and triggers system print dialogue."""
         try:
             fd, path = tempfile.mkstemp(suffix=".txt")
-            with os.fdopen(fd, 'w') as tmp: tmp.write(text)
+            with os.fdopen(fd, 'w') as tmp:
+                tmp.write(text)
+            
             if os.name == 'nt':
-                os.startfile(path, "print") # Windows Native
-            else:
-                webbrowser.open(f"file://{path}") # Browser bridge for Mac/Linux
-        except Exception as e: print(f"Printing error: {e}")
+                os.startfile(path, "print")  # Windows Native
+            elif os.name == 'posix':
+                # Unix/Linux/Mac
+                if os.uname().sysname == 'Darwin':
+                    subprocess.run(['open', path])  # macOS
+                else:
+                    subprocess.run(['xdg-open', path])  # Linux
+        except Exception as e:
+            print(f"Printing error: {e}")
 
     def export_to_excel(self):
         path = os.path.join(os.path.expanduser("~"), "HR_Nominal_Roll.csv")
-        with open(path, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(["Prefix", "F/N", "RNK", "Name", "Suffix", "Status", "Note"])
-            for p in self.people:
-                writer.writerow([p.get('prefix'), p.get('fn'), p.get('rnk'), p.get('name'), p.get('suffix'), p.get('status'), p.get('note')])
-        webbrowser.open(path)
+        try:
+            with open(path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Prefix", "F/N", "RNK", "Name", "Suffix", "Status", "Note"])
+                for p in self.people:
+                    writer.writerow([p.get('prefix'), p.get('fn'), p.get('rnk'), p.get('name'), p.get('suffix'), p.get('status'), p.get('note')])
+            
+            # Open the file with the default application
+            if os.name == 'nt':
+                os.startfile(path)  # Windows
+            elif os.name == 'posix':
+                if os.uname().sysname == 'Darwin':
+                    subprocess.run(['open', path])  # macOS
+                else:
+                    subprocess.run(['xdg-open', path])  # Linux
+            print(f"CSV exported successfully to {path}")
+        except Exception as e:
+            print(f"Export error: {e}")
 
     def cycle_status(self, index):
         states = ["Present", "Absent", "Leave", "Sick", "OI", "OE", "MA", "TIL", "STUDY LEAVE", "Course", "Detached Duty"]
-        curr = self.people[index]["status"]
+        curr = self.people[index].get("status", "Present")
         next_idx = (states.index(curr) + 1) % len(states) if curr in states else 0
         self.people[index]["status"] = states[next_idx]
-        self.save_data(); self.root.get_screen('main').refresh()
+        self.save_data()
+        self.root.get_screen('main').refresh()
 
 if __name__ == "__main__":
     HRApp().run()
