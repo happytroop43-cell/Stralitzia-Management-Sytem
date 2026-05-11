@@ -206,7 +206,7 @@ class HRApp(App):
             try:
                 with open(self.data_file, "r") as f:
                     self.people = json.load(f)
-            except:
+            except Exception:
                 self.people = []
         
         if not self.people:
@@ -293,7 +293,7 @@ class HRApp(App):
 
         popup = Popup(title="Personnel File Editor", content=content, size_hint=(0.98, 0.8))
 
-        print_btn.bind(on_release=lambda x: self.print_action(f"SICK LEAVE / PERSONNEL RECORD\nName: {name_in.text}\nRank: {prefix_btn.text} {rnk_in.text}\nNote: {note_in.text}"))
+        print_btn.bind(on_release=lambda x: self.print_action(f"SICK LEAVE / PERSONNEL RECORD\\nName: {name_in.text}\\nRank: {prefix_btn.text} {rnk_in.text}\\nNote: {note_in.text}"))
         
         def save_person(instance):
             new_data = {
@@ -309,10 +309,10 @@ class HRApp(App):
             popup.dismiss()
 
         def clear_fields():
-            fn_in.text = ''
-            rnk_in.text = ''
-            name_in.text = ''
-            note_in.text = ''
+            fn_in.text = ""
+            rnk_in.text = ""
+            name_in.text = ""
+            note_in.text = ""
 
         save_btn.bind(on_release=save_person)
         clear_btn.bind(on_release=lambda x: clear_fields())
@@ -329,5 +329,31 @@ class HRApp(App):
             else:
                 subprocess.run(['xdg-open', path])
         except Exception as e:
-            print(f"Printing error
-    
+            print(f"Printing error: {e}")
+
+    def export_to_excel(self):
+        path = os.path.join(os.path.expanduser("~"), "HR_Nominal_Roll.csv")
+        try:
+            with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Prefix", "F/N", "RNK", "Name", "Suffix", "Status", "Note"])
+                for p in self.people:
+                    writer.writerow([p.get('prefix'), p.get('fn'), p.get('rnk'), p.get('name'), p.get('suffix'), p.get('status'), p.get('note')])
+            if os.name == 'nt':
+                os.startfile(path)
+            else:
+                subprocess.run(['xdg-open', path])
+        except Exception as e:
+            print(f"Export error: {e}")
+
+    def cycle_status(self, index):
+        states = ["Present", "Absent", "Leave", "Sick", "OI", "OE", "MA", "TIL", "STUDY LEAVE", "Course", "Detached Duty"]
+        curr = self.people[index].get("status", "Present")
+        next_idx = (states.index(curr) + 1) % len(states) if curr in states else 0
+        self.people[index]["status"] = states[next_idx]
+        self.save_data()
+        self.root.get_screen('main').refresh()
+
+if __name__ == "__main__":
+    HRApp().run()
+        
