@@ -12,6 +12,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Install Mesa (Software OpenGL)
+      uses: f3d-app/install-mesa-windows-action@v1
+      with:
+        path: ${{ github.workspace }}
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -23,6 +28,9 @@ jobs:
         pip install "kivy[base]" pyinstaller
 
     - name: Build with PyInstaller
+      env:
+        # Forces Kivy to use the ANGLE (DirectX) backend if standard OpenGL fails
+        KIVY_GL_BACKEND: angle_sdl2
       run: |
         pyinstaller --noconfirm --onefile --windowed --name "HR_System_Windows" --hidden-import=kivy.core.window.window_sdl2 main.py
 
@@ -31,4 +39,4 @@ jobs:
       with:
         name: HR-Program-Windows
         path: dist/HR_System_Windows.exe
-
+        
