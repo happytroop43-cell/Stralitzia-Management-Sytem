@@ -2,23 +2,22 @@ import os
 import sys
 
 # ==========================================================
-# WINDOWS COMPATIBILITY FIXES (Place before any Kivy imports)
+# WINDOWS GRAPHICS STABILITY FIXES
 # ==========================================================
-# 1. Force OpenGL to use ANGLE (DirectX translation) to fix "OpenGL 1.1" errors
+# Force ANGLE (DirectX) to prevent OpenGL 1.1 Fatal Errors
 os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
 
-# 2. Fix for High-DPI screens so the app doesn't look tiny or blurry
+# Prevent Windows from making the app blurry on High-DPI screens
 if sys.platform == 'win32':
     try:
         from ctypes import windll
         windll.shcore.SetProcessDpiAwareness(1)
-    except:
+    except Exception:
         pass
 # ==========================================================
 
 import json
 import csv
-import webbrowser
 import tempfile
 import subprocess
 from kivy.app import App
@@ -33,9 +32,6 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.filechooser import FileChooserIconView
-
-# Dark Theme Window Setup
-Window.clearcolor = (0.1, 0.1, 0.1, 1)
 
 KV = """
 ScreenManagement:
@@ -145,7 +141,6 @@ class MainScreen(Screen):
         for i, p in enumerate(app.people):
             if query in p['name'].lower():
                 row = BoxLayout(size_hint_y=None, height=80, spacing=10)
-                
                 info = f"{p.get('prefix', 'Rfn')} {p.get('rnk', '')} {p['name']} ({p.get('suffix', 'PE')})"
                 name_btn = Button(text=info, background_color=(0.2, 0.2, 0.2, 1), color=(1,1,1,1), font_size='16sp')
                 name_btn.bind(on_release=lambda x, idx=i: app.edit_person_popup(idx))
@@ -201,13 +196,20 @@ class HRApp(App):
         self.load_data()
         return Builder.load_string(KV)
 
+    def on_start(self):
+        # Setting clearcolor here ensures the Window object is ready
+        Window.clearcolor = (0.1, 0.1, 0.1, 1)
+
     def load_data(self):
-        # Uses User Data Dir so it works after being turned into an EXE
         self.data_file = os.path.join(self.user_data_dir, "hr_v7_db.json")
         if os.path.exists(self.data_file):
-            with open(self.data_file, "r") as f:
-                self.people = json.load(f)
-        else:
+            try:
+                with open(self.data_file, "r") as f:
+                    self.people = json.load(f)
+            except:
+                self.people = []
+        
+        if not self.people:
             self.people = [{"prefix": "Rfn", "fn": "000", "rnk": "Pte", "name": "Admin", "suffix": "PE", "status": "Present", "note": ""}]
 
     def save_data(self):
@@ -306,8 +308,14 @@ class HRApp(App):
             self.root.get_screen('main').refresh()
             popup.dismiss()
 
+        def clear_fields():
+            fn_in.text = ''
+            rnk_in.text = ''
+            name_in.text = ''
+            note_in.text = ''
+
         save_btn.bind(on_release=save_person)
-        clear_btn.bind(on_release=lambda x: setattr(fn_in, 'text', '') or setattr(rnk_in, 'text', '') or setattr(name_in, 'text', '') or setattr(note_in, 'text', ''))
+        clear_btn.bind(on_release=lambda x: clear_fields())
         cancel_btn.bind(on_release=popup.dismiss)
         popup.open()
 
@@ -321,30 +329,5 @@ class HRApp(App):
             else:
                 subprocess.run(['xdg-open', path])
         except Exception as e:
-            print(f"Printing error: {e}")
-
-    def export_to_excel(self):
-        path = os.path.join(os.path.expanduser("~"), "HR_Nominal_Roll.csv")
-        try:
-            with open(path, 'w', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f)
-                writer.writerow(["Prefix", "F/N", "RNK", "Name", "Suffix", "Status", "Note"])
-                for p in self.people:
-                    writer.writerow([p.get('prefix'), p.get('fn'), p.get('rnk'), p.get('name'), p.get('suffix'), p.get('status'), p.get('note')])
-            if os.name == 'nt':
-                os.startfile(path)
-            else:
-                subprocess.run(['xdg-open', path])
-        except Exception as e:
-            print(f"Export error: {e}")
-
-    def cycle_status(self, index):
-        states = ["Present", "Absent", "Leave", "Sick", "OI", "OE", "MA", "TIL", "STUDY LEAVE", "Course", "Detached Duty"]
-        curr = self.people[index].get("status", "Present")
-        next_idx = (states.index(curr) + 1) % len(states) if curr in states else 0
-        self.people[index]["status"] = states[next_idx]
-        self.save_data()
-        self.root.get_screen('main').refresh()
-
-if __name__ == "__main__":
-    HRApp().run()
+            print(f"Printing error
+    
