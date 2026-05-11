@@ -16,6 +16,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.filechooser import FileChooserIconView
+from kivy.uix.gridlayout import GridLayout
 
 # Dark Theme Window Setup
 Window.clearcolor = (0.1, 0.1, 0.1, 1)
@@ -72,6 +73,7 @@ ScreenManagement:
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
+                padding: 10
 
 <AnalysisScreen>:
     name: 'analysis'
@@ -87,15 +89,21 @@ ScreenManagement:
             height: 60
         
         ScrollView:
-            Label:
-                id: stats
-                text: "Calculating..."
-                font_size: '18sp'
-                halign: 'left'
-                valign: 'top'
+            size_hint_y: 1
+            GridLayout:
+                cols: 1
                 size_hint_y: None
-                height: self.texture_size[1]
-                text_size: self.width, None
+                height: self.minimum_height
+                spacing: 10
+                Label:
+                    id: stats
+                    text: "Calculating..."
+                    font_size: '18sp'
+                    halign: 'left'
+                    valign: 'top'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
             
         BoxLayout:
             size_hint_y: None
@@ -228,21 +236,21 @@ class HRApp(App):
         else:
             p = {"prefix": "Rfn", "fn": "", "rnk": "", "name": "", "suffix": "PE", "status": "Present", "note": ""}
 
-        content = BoxLayout(orientation='vertical', padding=20, spacing=20)
+        content = BoxLayout(orientation='vertical', padding=15, spacing=15)
         
         # Row 1: The requested structure
-        row1 = BoxLayout(size_hint_y=None, height=55, spacing=10)
+        row1 = BoxLayout(size_hint_y=None, height=55, spacing=8)
         
-        prefix_btn = Button(text=p.get('prefix', 'Rfn'), size_hint_x=0.25, bold=True, background_color=(0.2, 0.4, 0.8, 1))
+        prefix_btn = Button(text=p.get('prefix', 'Rfn'), size_hint_x=0.2, bold=True, background_color=(0.2, 0.4, 0.8, 1))
         def toggle_pref(inst):
             inst.text = self.prefixes[(self.prefixes.index(inst.text) + 1) % len(self.prefixes)]
         prefix_btn.bind(on_release=toggle_pref)
 
-        fn_in = TextInput(text=p.get('fn', ''), hint_text="F/N", multiline=False)
-        rnk_in = TextInput(text=p.get('rnk', ''), hint_text="RNK", multiline=False)
-        name_in = TextInput(text=p.get('name', ''), hint_text="Name", multiline=False)
+        fn_in = TextInput(text=p.get('fn', ''), hint_text="F/N", multiline=False, size_hint_x=0.15)
+        rnk_in = TextInput(text=p.get('rnk', ''), hint_text="RNK", multiline=False, size_hint_x=0.15)
+        name_in = TextInput(text=p.get('name', ''), hint_text="Name", multiline=False, size_hint_x=0.35)
         
-        suffix_btn = Button(text=p.get('suffix', 'PE'), size_hint_x=0.2, bold=True, background_color=(0.2, 0.6, 0.4, 1))
+        suffix_btn = Button(text=p.get('suffix', 'PE'), size_hint_x=0.15, bold=True, background_color=(0.2, 0.6, 0.4, 1))
         def toggle_suf(inst):
             inst.text = "MC" if inst.text == "PE" else "PE"
         suffix_btn.bind(on_release=toggle_suf)
@@ -254,9 +262,9 @@ class HRApp(App):
         row1.add_widget(suffix_btn)
 
         # Row 2: Sick Leave / Notes / USB Attach
-        row2 = BoxLayout(size_hint_y=None, height=55, spacing=10)
+        row2 = BoxLayout(size_hint_y=None, height=55, spacing=8)
         note_in = TextInput(text=p.get('note', ''), hint_text="Sick Leave Note or USB File Path...", multiline=False)
-        usb_btn = Button(text="Attach File", size_hint_x=0.3, background_color=(1, 0.8, 0, 1), color=(0,0,0,1), bold=True)
+        usb_btn = Button(text="Attach File", size_hint_x=0.25, background_color=(1, 0.8, 0, 1), color=(0,0,0,1), bold=True)
         usb_btn.bind(on_release=lambda x: self.open_usb_chooser(note_in))
         
         row2.add_widget(note_in)
@@ -266,7 +274,7 @@ class HRApp(App):
         content.add_widget(row2)
 
         # Main Controls
-        btn_layout = BoxLayout(size_hint_y=None, height=65, spacing=15)
+        btn_layout = BoxLayout(size_hint_y=None, height=60, spacing=10)
         save_btn = Button(text="SAVE RECORD", background_color=(0, 0.7, 0, 1), bold=True)
         print_btn = Button(text="PRINT RECORD", background_color=(0, 0.4, 0.8, 1), bold=True)
         clear_btn = Button(text="CLEAR", background_color=(0.8, 0, 0, 1), bold=True)
@@ -278,7 +286,7 @@ class HRApp(App):
         btn_layout.add_widget(cancel_btn)
         content.add_widget(btn_layout)
 
-        popup = Popup(title="Personnel File Editor", content=content, size_hint=(0.98, 0.8))
+        popup = Popup(title="Personnel File Editor", content=content, size_hint=(0.95, 0.75))
 
         print_btn.bind(on_release=lambda x: self.print_action(f"SICK LEAVE / PERSONNEL RECORD\nName: {name_in.text}\nRank: {prefix_btn.text} {rnk_in.text}\nNote: {note_in.text}"))
         
